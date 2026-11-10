@@ -1,0 +1,4 @@
+# Clone "Sony" (ShenZhen VideoScape TVOS, Zeasn launcher), MediaTek mt5862, Android 9 - batch 1
+com.android.media.module.services     # disguised /data app with ad + proxy SDK services, installed by zeasn general
+com.zeasn.services.general            # Zeasn ad / weather / search service, boots with the TV
+com.zeasn.tv.assistant                # Zeasn "TV Master": package + network watcher

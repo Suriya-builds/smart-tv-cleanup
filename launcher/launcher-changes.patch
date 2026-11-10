@@ -1,0 +1,143 @@
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/ClockScene.java b/launcher/app/src/main/java/com/gathin/tvhome/ClockScene.java
+index d56e19f8..49a93dfc 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/ClockScene.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/ClockScene.java
+@@ -131,7 +131,19 @@ final class ClockScene {
+         }
+         // What Home plays, and Config puts the single wallpaper in it when a theme has no collection.
+         // Reading cfg.wallpaper first held the screensaver on wallpaper.jpg while Home rotated.
+-        if (cfg.wallpapers.isEmpty()) {
++        File themeDir = Config.dir(ctx);
++        List<File> own = themeDir == null ? new ArrayList<>()
++                : WallpaperRotation.clockImages(new File(themeDir, "wallpapers"));
++        if (!own.isEmpty()) {
++            // The theme gave the screensaver its own pictures (wallpapers/clock-*): rotate those instead.
++            rotation = new ArrayList<>(own);
++            wallpaperFile = rotation.get(0);
++            rotationMs = cfg.wallpaperRotationMinutes * 60_000L;
++            order = cfg.wallpaperOrder;
++            moods = java.util.Collections.emptyMap();
++            latitude = "";
++            longitude = "";
++        } else if (cfg.wallpapers.isEmpty()) {
+             wallpaperFile = null;
+         } else {
+             // Start on the picture Home is showing. WallpaperPlayer records it under the same
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java b/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
+index c6ea9470..511b2dd4 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
+@@ -3268,9 +3268,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+     private Intent liveTvIntent() {
+         if (liveTvPkg.isEmpty()) return null;
+         Intent i = getPackageManager().getLeanbackLaunchIntentForPackage(liveTvPkg);
+-        if (i != null || liveTvAction.isEmpty()) return i;
+-        Intent byAction = new Intent(liveTvAction).setPackage(liveTvPkg);
+-        return getPackageManager().resolveActivity(byAction, 0) != null ? byAction : null;
++        if (i != null) return i;
++        if (!liveTvAction.isEmpty()) {
++            Intent byAction = new Intent(liveTvAction).setPackage(liveTvPkg);
++            if (getPackageManager().resolveActivity(byAction, 0) != null) return byAction;
++        }
++        // No launcher entry at all (MediaTek tvcenter on VideoScape TVOS): the app still takes the standard
++        // "view the channel list" intent, so the Inputs menu still gets its Live TV row.
++        Intent channels = new Intent(Intent.ACTION_VIEW)
++                .setDataAndType(TvContract.Channels.CONTENT_URI, TvContract.Channels.CONTENT_TYPE)
++                .setPackage(liveTvPkg);
++        return getPackageManager().resolveActivity(channels, 0) != null ? channels : null;
+     }
+ 
+     /** The TV's own source-selection panel, for TVs that have no TvInputManager (TCL Android TV 9): a
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/WallpaperRotation.java b/launcher/app/src/main/java/com/gathin/tvhome/WallpaperRotation.java
+index c1044b36..dc830c51 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/WallpaperRotation.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/WallpaperRotation.java
+@@ -18,13 +18,26 @@ final class WallpaperRotation {
+         return ORDER_SEQUENTIAL.equals(order) || ORDER_SHUFFLE.equals(order);
+     }
+ 
++    /** Pictures named clock-*.jpg in wallpapers/ belong to the clock screensaver only, never to Home. */
++    static final String CLOCK_PREFIX = "clock-";
++
+     static List<File> images(File directory) {
++        return images(directory, false);
++    }
++
++    /** The clock screensaver's own pictures (wallpapers/clock-*); empty when the theme has none. */
++    static List<File> clockImages(File directory) {
++        return images(directory, true);
++    }
++
++    private static List<File> images(File directory, boolean clock) {
+         List<File> result = new ArrayList<>();
+         File[] entries = directory == null ? null : directory.listFiles();
+         if (entries == null) return result;
+         Arrays.sort(entries, Comparator.comparing(File::getName));
+         for (File entry : entries) {
+             String name = entry.getName().toLowerCase(Locale.ROOT);
++            if (name.startsWith(CLOCK_PREFIX) != clock) continue;
+             if (entry.isFile() && entry.length() > 0 && entry.length() <= 10 * 1024 * 1024
+                     && (name.endsWith(".jpg") || name.endsWith(".jpeg")
+                     || name.endsWith(".png") || name.endsWith(".webp"))) {
+diff --git a/launcher/app/src/main/res/drawable/banner_netflix.xml b/launcher/app/src/main/res/drawable/banner_netflix.xml
+new file mode 100644
+index 00000000..949ef368
+--- /dev/null
++++ b/launcher/app/src/main/res/drawable/banner_netflix.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Netflix tile for this TV: its Netflix (4.16) ships no TV banner, only a small icon. Black field with the
++     red N (two dark side bars, bright diagonal), drawn as paths. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="320dp" android:height="180dp"
++    android:viewportWidth="320" android:viewportHeight="180">
++    <path android:fillColor="#FF000000" android:pathData="M0,0h320v180h-320z" />
++    <path android:fillColor="#FFB1060F" android:pathData="M131,30h22v120l-22,3z" />
++    <path android:fillColor="#FFB1060F" android:pathData="M167,30h22v123l-22,-3z" />
++    <path android:fillColor="#FFE50914" android:pathData="M131,30h22l36,123h-22z" />
++</vector>
+diff --git a/launcher/app/src/main/res/values/config.xml b/launcher/app/src/main/res/values/config.xml
+index 809a2f18..bd6f7143 100644
+--- a/launcher/app/src/main/res/values/config.xml
++++ b/launcher/app/src/main/res/values/config.xml
+@@ -17,10 +17,10 @@
+ 
+     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
+     <string-array name="dock_apps">
+-        <item>com.netflix.ninja</item>
+-        <item>com.amazon.amazonvideo.livingroom</item>
++        <item>com.netflix.mediaclient</item>
+         <item>com.google.android.youtube.tv</item>
+-        <item>in.startv.hotstar</item>
++        <item>com.amazon.amazonvideo.livingroom</item>
++        <item>in.startv.hotstar.dplus.tv</item>
+     </string-array>
+     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
+          the first grid apps, so the dock never shows a gap. false leaves them empty (#162); a theme can
+@@ -31,6 +31,9 @@
+     <string-array name="hidden_apps">
+         <item>com.mediatek.wwtv.tvcenter</item>
+         <item>com.mitv.gallery</item>
++        <item>com.amazon.avod.thirdpartyclient</item>
++        <item>cn.zeasn.launcher.vstoresubclient.videoscape368</item>
++        <item>de.szalkowski.activitylauncher</item>
+     </string-array>
+ 
+     <!-- The TV's Live TV / tuner app, offered at the end of the Inputs menu. Leave empty to omit. -->
+@@ -90,6 +93,7 @@
+     <!-- A tile's artwork instead of the app's banner: "package=drawable", a banner_* drawable bundled with the
+          launcher (res/drawable). banner_tv is a magenta field with the Live TV glyph. -->
+     <string-array name="app_banners">
++        <item>com.netflix.mediaclient=banner_netflix</item>
+     </string-array>
+ 
+     <!-- TVs with no TvInputManager have no HDMI list to read, but their own source-selection panel
+@@ -436,6 +440,8 @@
+          (many China-market TVs, e.g. Coocaa 8R145), a fresh Home with app_library on would otherwise be
+          nearly empty. Empty (off) by default, so existing setups change nothing. -->
+     <string-array name="library_apps" translatable="false">
++        <!-- This TV's Netflix (4.16) has no leanback entry, only a phone-style LAUNCHER one. -->
++        <item>com.netflix.mediaclient</item>
+     </string-array>
+ 
+     <!-- Packages the App library catalogue never offers, even with app_library on (config.xml

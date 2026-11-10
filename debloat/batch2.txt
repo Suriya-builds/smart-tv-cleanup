@@ -1,0 +1,4 @@
+# Clone "Sony" (ShenZhen VideoScape TVOS, Zeasn launcher), MediaTek mt5862, Android 9 - batch 2
+com.zeasn.deviceportal.asdprovider.videoscape   # Zeasn device portal: boot-time ad/portal service, also OTA_PULL_CHECK (no update notices)
+cn.zeasn.tv.vstoresubclient.mtk368.videoscape   # Zeasn TV Store, can install apps silently (Aptoide TV stays)
+us.zoom.videomeetings                           # Zoom, unused

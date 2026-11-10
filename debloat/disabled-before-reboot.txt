@@ -1,0 +1,7 @@
+package:cn.zeasn.launcher.vstoresubclient.videoscape368
+package:cn.zeasn.tv.vstoresubclient.mtk368.videoscape
+package:com.android.media.module.services
+package:com.zeasn.deviceportal.asdprovider.videoscape
+package:com.zeasn.services.general
+package:com.zeasn.tv.assistant
+package:us.zoom.videomeetings

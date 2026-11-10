@@ -1,0 +1,21 @@
+{
+  "columns": 4,
+  "background_color": "#05060A",
+  "wallpaper": true,
+  "wallpaper_rotation_minutes": 30,
+  "wallpaper_order": "sequential",
+  "wallpaper_captions": true,
+  "icon_only_buttons": true,
+  "dock_glass": true,
+  "dock_opacity": 55,
+  "dock_even_padding": true,
+  "dock_title": true,
+  "ambient_glow": false,
+  "app_glow": false,
+  "fade_rows": true,
+  "focus_overshoot": false,
+  "advanced_effects": true,
+  "home_idle_clock_minutes": 5,
+  "clock_wallpaper": true,
+  "clock_wallpaper_dim": 35
+}

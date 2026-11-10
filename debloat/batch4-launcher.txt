@@ -1,0 +1,1 @@
+cn.zeasn.launcher.vstoresubclient.videoscape368   # stock Zeasn launcher, replaced by com.gathin.tvhome (confirmed Home first)
